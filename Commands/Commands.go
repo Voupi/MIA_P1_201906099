@@ -5,6 +5,7 @@ import (
 	MBR "MIA_P1_201906099/Models"
 	"bufio"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 )
@@ -18,7 +19,7 @@ func GenerarDiscoBinario(nombreArchivo string) error {
 	}
 	var fileName string
 	// Crear el archivo binario
-	nombreArchivo += ".sdk"
+	nombreArchivo += ".dsk"
 	fileName = Files.PathFolder + nombreArchivo
 	Files.CreateFile(fileName)
 	file, err := Files.OpenFile(fileName)
@@ -89,5 +90,44 @@ func Execute(path string, lineas *[]string) error {
 		return err
 	}
 
+	return nil
+}
+
+/* funcion que : RMDISK Elimina con rmdisk un archivo con el nombre que recibe del comando driveletter y que tenga mensaje
+de confirmación de eliminación de disco*/
+
+func RMDISK(fileName string) error { //rmdisk -driveletter=A
+	// Confirmación de eliminación de disco
+	// verificar si un archivo existe Recibe el path del archivo
+	filePath := Files.PathFolder + fileName + ".sdk"
+	fmt.Println("Es el path del archivo ", filePath)
+	_, err := os.Stat(filePath)
+	if err != nil {
+		fmt.Printf("El archivo '%s' no existe.\n", fileName)
+		return nil
+	}
+	if os.IsNotExist(err) { // Verificar si el archivo no existe
+		fmt.Printf("El archivo '%s' no existe.\n", fileName)
+		return err
+	}
+	fmt.Printf("¿Está seguro que desea eliminar el disco '%s'? (S/N): ", fileName) // Solicitar confirmación
+	var confirmation string
+	fmt.Scanln(&confirmation)
+	if strings.ToUpper(confirmation) != "S" { // Verificar si la confirmación es "S"
+		fmt.Println("Operación cancelada.")
+		return nil
+	}
+	_, err = Files.OpenFile(filePath) // Abrir el archivo
+	if err != nil {
+		fmt.Printf("Error al leer el archivo '%s': %v\n", fileName, err)
+		return err
+	}
+	err = os.Remove(filePath) // Eliminar el archivo
+	if err != nil {
+		fmt.Printf("Error al eliminar el archivo '%s': %v\n", fileName, err)
+		return err
+	}
+
+	fmt.Printf("El disco '%s' ha sido eliminado exitosamente.\n", fileName)
 	return nil
 }

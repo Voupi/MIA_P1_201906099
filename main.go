@@ -10,10 +10,13 @@ import (
 func main() {
 	fmt.Println("===Start=== Usuario: Daniel Chan   Carné: 201906099")
 	var command string
-	fmt.Println("Ingrese el comando a procesar: ")
-	// Utilizando bufio.NewReader para leer la línea completa
-	reader := bufio.NewReader(os.Stdin)
-	command, _ = reader.ReadString('\n')
-	//fmt.Scanln(&command)
-	Analyzer.AnalyzeType(command)
+	for {
+		fmt.Println("Ingrese el comando a procesar (o 'salir' para terminar): ")
+		reader := bufio.NewReader(os.Stdin)
+		command, _ = reader.ReadString('\n')
+		if command == "salir\n" {
+			break
+		}
+		Analyzer.AnalyzeType(command)
+	}
 }
