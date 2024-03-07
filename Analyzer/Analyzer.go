@@ -40,19 +40,82 @@ func AnalyzeType(command string) { //Método donde se va a redirificar el comand
 			}
 		}
 		Commands.RMDISK(*driveletter)
+	} else if strings.Contains(command, "FDISK") || strings.Contains(command, "fdisk") {
+		processFDISKCommand(command)
 	}
 }
+func processFDISKCommand(command string) {
+	fs := flag.NewFlagSet("fdisk", flag.ExitOnError)
+	size := fs.Int("size", 0, "Tamaño") //definiendo el tamaño como 0 predeterminadamente
+	driveletter := fs.String("driveletter", "", "Letra") //definiendo la letra como vacío predeterminadamente
+	name := fs.String("name", "", "Nombre")
+	unit := fs.String("unit", "m", "Unidad") //definiendo la unidad como mega predeterminadamente
+	type_ := fs.String("type", "p", "Tipo") //definiendo el tipo de partición como primaria predeterminadamente
+	fit := fs.String("fit", "f", "Ajuste") //definiendo el ajuste como first predeterminadamente
+	delete := fs.String("fit", "", "Ajuste") //definiendo el valor de delete como vacío predeterminadamente
+	add := fs.String("fit", 0, "Ajuste") //definiedo el valor de add como 0 predeterminadamente
+	
+	// Parse the flags
+	fs.Parse(os.Args[1:])
+
+	// find the flags in the input
+	matches := re.FindAllStringSubmatch(command, -1)
+
+	// Process the input
+	for _, match := range matches {
+		flagName := match[1]
+		flagValue := strings.ToLower(match[2])
+
+		flagValue = strings.Trim(flagValue, "\"")
+
+		switch flagName {
+		case "size", "fit", "unit", "driveletter", "name", "type", "delete", "add":
+			fs.Set(flagName, flagValue)
+		default:
+			fmt.Println("Error: Flag not found")
+		}
+	}
+	if *driveletter == "" || *name == "" { //Valida que los valores de driveletter y name no estén vacíos ya que son requeridos obligatoriamente
+		fmt.Println("Error: Driveletter and name cannot be empty")
+		return
+	}
+	if *unit != "b" && *unit != "k" && *unit != "m" { //Valida que el atributo unit sea igual a bytes, kilo o mega
+		fmt.Println("Error: Unit must be b, k or m")
+		return
+	}
+	if *unit == "k" { // Set the size in bytes
+		*size = *size * 1024
+	} else if *unit == "m" {
+		*size = *size * 1024 * 1024
+	}
+	if *type_ != "p" && *type_ != "e" && *type_ != "l" { //Valida que el atributo type sea igual a p-rimaria, e-xtendida o l-ogica
+		fmt.Println("Error: Type must be p, e or l")
+		return
+	}
+	if *fit != "b" && *fit != "w" && *fit != "f" { //Valida que el atributo fit sea igual a best, worst o first
+		fmt.Println("Error: Fit must be b, w or f")
+		return
+	}
+	/*if *size <= 0 {//Valida que el atributo size sea mayor a 0
+		fmt.Println("Error: Size must be greater than 0")
+		return
+	}*/
+
+	Commands.FDISK(*size, *driveletter, *name, *unit, *type_, *fit, *delete, *add)
 
 func processMkdiskCommand(command string) {
 	fmt.Println("La cadena contiene la palabra 'mkdisk'.")
-	Commands.GenerarDiscoBinario(Files.ObtenerNuevoNombreArchivo())
 	size, fit, unit := defineFlags()
-	input, err := subCadena(command, "-", 0) // Verificar si el carácter "-" está presente
-	if err != nil {
-		return
-	}
-	processInput(input, size, fit, unit)
+	processInput(command, size, fit, unit)
 	validateFlags(size, fit, unit)
+	if *unit == "k" {
+		*size = *size * 1024
+	} else {
+		*size = *size * 1024 * 1024
+	}
+
+	Commands.MKDISK(Files.ObtenerNuevoNombreArchivo(), size, fit, unit)
+
 }
 
 func defineFlags() (*int, *string, *string) {
@@ -97,8 +160,6 @@ func processExecuteCommand(command string) {
 }
 
 func processInput(input string, size *int, fit *string, unit *string) {
-	re := regexp.MustCompile(`-(\w+)=("[^"]+"|\S+)`)
-
 	matches := re.FindAllStringSubmatch(input, -1)
 
 	for _, match := range matches {
